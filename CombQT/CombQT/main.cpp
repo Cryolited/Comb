@@ -112,7 +112,8 @@ class AnalysisBank {
         double period_us = 10 * 1e-6;
         uint16_t first_period_part = NFFT ;
         uint16_t second_period_part = NFFT * WIN_OVERLAP_RATIO;
-        vector<double> pulse_sig_phase_n;
+        vector<complex<double>> pulse_sig_phase_n;
+        int32_t maxSummLog;
 
 
 
@@ -121,18 +122,18 @@ class AnalysisBank {
         void npr_coeff(int16_t N,int16_t L)
         {
             //if (L == 16)
-              float K=5.856;
+              double K=5.856;
             int16_t M = N /2;            
             vector<complex<double> > A(1024, 0);
             vector<complex<double> > B(1024, 0);
             //fftw_complex B[1024];
             h_fb_win_fxp.resize(L*M);
-            float F,x;
+            double F,x;
              for (int n = 0; n < L*M ; ++n) {
-                 F = (float)n / L/M;
+                 F = (double)n / L/M;
                  x = K*(2*M*F-0.5); // rrerf
                  if (n < L*M/2)
-                 A[n]= sqrt(0.5*erfc(x)) / 1024; // 1024 вес
+                 A[n]= sqrt(0.5*erfc(x)) / 1023.9911405565; // 1024 вес
                  else
                  A[n]= A[L*M-n].real(); // Для симметрии мб индексация
              }
@@ -152,7 +153,7 @@ class AnalysisBank {
         {
             int32_t maxSumm = fbWinMaxGain();
             //fb_analysis_win_max_gain_bit = ceil(max(log2(sum(abs(buffer(h_fb_win_fxp,NFFT)),2))));
-            int32_t maxSummLog = log2(maxSumm) + 0.5; // ceil
+            maxSummLog = log2(maxSumm) + 0.5; // ceil
             int16_t round_fft = coeff_radix-maxSummLog ;
             non_maximally_decimated_fb();
         }
@@ -168,7 +169,8 @@ class AnalysisBank {
                 pulse_sig_phase_n.resize(sig.si.size());
                 for (int k = NFFT/FB_OVERLAP_RATIO*n; k < sig.si.size() ; ++k)
                 {
-                    pulse_sig_phase_n[k] = sig.si[k];
+                    //pulse_sig_phase_n[k] = sig.si[k];
+                    pulse_sig_phase_n[k] = complex<double>(sig.si[k],sig.sq[k]);
                 }
                 maximally_decimated_fb();
             }
@@ -177,30 +179,40 @@ class AnalysisBank {
 
         void maximally_decimated_fb()
         {
-
+            vector<complex<double>> f(sig.si.size(),0);
+            vector<complex<double>> f2(sig.si.size(),0);
             for(int n = 0; n < NFFT ; ++n)
-            {
-                vector<double> F(sig.si.size());
-                for( int k = 0; k < sig.si.size()/NFFT ; ++k ) // filter
-                    for( int m = 0; m < WIN_OVERLAP_RATIO; ++m )
+            {                
+                vector<double> F(sig.si.size(),0);
+
+                int longSize = sig.si.size()/NFFT ;
+                for( int k = 0; k < longSize; ++k ) // filter 9
+                {
+                    complex<double> fiq(0);
+                    for( int m = 0; m < WIN_OVERLAP_RATIO; ++m ) // 8
                     {
-                        if( k - m < 0 )
-                            break;
-                        else
-                        {
-                            int32_t h_fir = h_fb_win_fxp[m*128 + n];
-                            double sig_ph = pulse_sig_phase_n[(k - m)*128 + n ];
-                            F[k] += h_fir * sig_ph ;
+                        if( k - m > 0 )
+                        {                            
+                            int indH = 128*m +127 -n;
+                            int indS =  (k - m)*128 + n ;
+                            int32_t h_fir = h_fb_win_fxp[indH]; //m*128 + n
+                            complex<double> sigPh = pulse_sig_phase_n[indS];
+                            sigPh *= h_fir;
+                            fiq +=  sigPh ;
+
                         }
                     }
-                int t = 1;
+                    f[k*128 + n] = fpga_round(fiq, maxSummLog);
+                }
             }
+            fft( (fftw_complex*) &f[127],(fftw_complex*) &f2[127],128);
+            int t = 1;
         }
 
 
         int32_t fbWinMaxGain()
         {
-            int32_t summ = 1,maxSumm = 0; // 1 учитывает первый эл-т
+            int32_t summ = 1,maxSumm = 0; // =1 учитывает первый эл-т
             for (int n = 0; n < NFFT ; ++n) { // 128
                 for (int m = 0; m < WIN_OVERLAP_RATIO ; ++m) { //8
                     summ = summ + abs(h_fb_win_fxp[n + m*128]);
@@ -220,6 +232,10 @@ class AnalysisBank {
             fftw_cleanup();
         }
 
+        complex<double> fpga_round( complex<double> din, int32_t shval )
+        {
+           return complex<double>(floor(din.real()/ pow(2,shval) + 0.5), floor(din.imag()/ pow(2,shval) + 0.5)); // floor ??
+        }
 
 };
 
