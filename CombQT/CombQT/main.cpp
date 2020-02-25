@@ -114,6 +114,7 @@ class AnalysisBank {
         uint16_t second_period_part = NFFT * WIN_OVERLAP_RATIO;
         vector<complex<double>> pulse_sig_phase_n;
         int32_t maxSummLog;
+        vector<complex<double>> filtered;
 
 
 
@@ -137,7 +138,7 @@ class AnalysisBank {
                  else
                  A[n]= A[L*M-n].real(); // Для симметрии мб индексация
              }
-            fft((fftw_complex*) &A[0],(fftw_complex*) &B[0],1024);//(fftw_complex*)
+            fft((fftw_complex*) &A[0],(fftw_complex*) &B[0],1024, true);//(fftw_complex*)
             double max_coeff_val = B[0].real();
             coeff_radix = log2(pow(2,WIN_H_RADIX-1)/max_coeff_val);
             for (int n = 0; n < L*M ; ++n) { // fftshift
@@ -163,7 +164,7 @@ class AnalysisBank {
             //Y_sum = zeros(NFFT,overlapped_ratio*ceil(length(pulse_sig_round)/NFFT));
             int16_t size = FB_OVERLAP_RATIO * ceil(sig.si.size() / NFFT);
             vector<vector<double> > a(NFFT, vector<double>(size, 0));
-
+            filtered.resize(sig.si.size() * FB_OVERLAP_RATIO );
             for(int n = 0; n < FB_OVERLAP_RATIO ; ++n)
             {
                 pulse_sig_phase_n.resize(sig.si.size());
@@ -181,11 +182,12 @@ class AnalysisBank {
         {
             vector<complex<double>> f(sig.si.size(),0);
             vector<complex<double>> f2(sig.si.size(),0);
+            int longSize = 0;
             for(int n = 0; n < NFFT ; ++n)
             {                
                 vector<double> F(sig.si.size(),0);
 
-                int longSize = sig.si.size()/NFFT ;
+                longSize = sig.si.size()/NFFT ;
                 for( int k = 0; k < longSize; ++k ) // filter 9
                 {
                     complex<double> fiq(0);
@@ -204,9 +206,19 @@ class AnalysisBank {
                     }
                     f[k*128 + n] = fpga_round(fiq, maxSummLog);
                 }
+            }            
+            for( int k = 0; k < longSize; ++k ) // filter 9
+            {
+                fft( (fftw_complex*) &f[128*k],(fftw_complex*) &f2[128*k],128, false);
+                for( int n = 0; n < 128; ++n )
+                {
+                    f2[128*k + n] = fpga_round(f2[128*k + n], coeff_radix-maxSummLog);
+                    filtered[]
+                }
             }
-            fft( (fftw_complex*) &f[127],(fftw_complex*) &f2[127],128);
             int t = 1;
+
+            //Y_sum(:,k+(n-1)*overlapped_ratio) = Y_phase_n(:,n);
         }
 
 
@@ -224,11 +236,20 @@ class AnalysisBank {
             return maxSumm;
         }
 
-        void fft( fftw_complex* in, fftw_complex* out, uint32_t fft_size )
+        void fft( fftw_complex* in, fftw_complex* out, uint32_t fft_size, bool backward )
         {
-            fftw_plan plan = fftw_plan_dft_1d( fft_size, in, out, FFTW_BACKWARD, FFTW_ESTIMATE);
-            fftw_execute(plan);
-            fftw_destroy_plan(plan);
+            if (backward)
+            {
+                fftw_plan plan = fftw_plan_dft_1d( fft_size, in, out, FFTW_BACKWARD, FFTW_ESTIMATE);
+                fftw_execute(plan);
+                fftw_destroy_plan(plan);
+            }
+                else
+            {
+                fftw_plan plan = fftw_plan_dft_1d( fft_size, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+                fftw_execute(plan);
+                fftw_destroy_plan(plan);
+            }
             fftw_cleanup();
         }
 
