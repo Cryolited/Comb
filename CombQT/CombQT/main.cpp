@@ -1,8 +1,14 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
-#include <complex> // mb not need
+#include <complex>
+#include <algorithm>
 #include <fftw3.h>
+
+#ifdef _DEBUG
+#include <crtdbg.h>
+#define _CRTDBG_MAP_ALLOC
+#endif
 
 #define WIN_H_RADIX        18
 #define FB_OVERLAP_RATIO  2
@@ -115,6 +121,7 @@ class AnalysisBank {
         vector<complex<double>> pulse_sig_phase_n;
         int32_t maxSummLog;
         vector<complex<double>> filtered;
+        vector<complex<double>> sigOut;
 
 
 
@@ -157,6 +164,61 @@ class AnalysisBank {
             maxSummLog = log2(maxSumm) + 0.5; // ceil
             int16_t round_fft = coeff_radix-maxSummLog ;
             non_maximally_decimated_fb();
+            npr_synthesis();
+        }
+
+        void npr_synthesis()
+        {
+            uint16_t sizeFiltered = filtered.size();
+            uint16_t rows = sizeFiltered / NFFT;
+            vector<complex<double> > yfft(sizeFiltered , 0);
+            for( int k = 0; k < rows ; ++k ) // for each row = 18
+            {
+                fft( (fftw_complex*) &filtered[NFFT*k],(fftw_complex*) &yfft[NFFT*k],NFFT, true);
+            }
+            for(int n = 0; n < NFFT ; ++n)
+            {
+                int16_t longSize = sig.si.size()/NFFT ;
+                for( int k = 0; k < longSize; ++k ) // filter 9
+                {
+                    complex<double> fiq1(0);
+                    complex<double> fiq2(0);
+                    for( int m = 0; m < WIN_OVERLAP_RATIO; ++m ) // 8
+                    {
+                        if( k - m >= 0 )
+                        {
+                            //int indH = 128*m +127 -n;
+                            int indH = 128*m + n;
+                            int indS1 =  (k - m)*256 + n ;
+                            int indS2 =  (k - m)*256 + (64 + n)%128 +128; //192 is cyclic shift
+                            int32_t h_fir = h_fb_win_fxp[indH];
+                            complex<double> sigPh1 = fpga_round(yfft[indS1],1);
+                            complex<double> sigPh2 = fpga_round(yfft[indS2],1);
+                            if (n > 63)
+                                int fl=1;
+                            sigPh1 *= h_fir;
+                            sigPh2 *= h_fir;
+                            fiq1 +=  sigPh1 ;
+                            fiq2 +=  sigPh2 ;
+
+                        }
+                    }
+                    filtered[k*NFFT + n] = fpga_round(fiq1, 16);
+                    filtered[k*NFFT + n + longSize*NFFT] = fpga_round(fiq2, 16); //For debug only
+
+                }
+            }
+            // combine filter results
+            sigOut.resize(sig.si.size());
+            int ind=0;
+            for(int n = 0; n < sig.si.size() ; ++n)
+            {
+                if (n < NFFT/2)
+                    sigOut[n] = filtered[n] ;
+                else
+                    sigOut[n] = filtered[n] + filtered[sizeFiltered/2 + ind++];
+            }
+            int flag = 1;
         }
 
         void non_maximally_decimated_fb()
@@ -167,18 +229,20 @@ class AnalysisBank {
             filtered.resize(sig.si.size() * FB_OVERLAP_RATIO );
             for(int n = 0; n < FB_OVERLAP_RATIO ; ++n)
             {
+                pulse_sig_phase_n.clear();
                 pulse_sig_phase_n.resize(sig.si.size());
+                int16_t ind = 0;
                 for (int k = NFFT/FB_OVERLAP_RATIO*n; k < sig.si.size() ; ++k)
                 {
                     //pulse_sig_phase_n[k] = sig.si[k];
-                    pulse_sig_phase_n[k] = complex<double>(sig.si[k],sig.sq[k]);
+                    pulse_sig_phase_n[ind++] = complex<double>(sig.si[k],sig.sq[k]);
                 }
-                maximally_decimated_fb();
+                maximally_decimated_fb(n);
             }
 
         }
 
-        void maximally_decimated_fb()
+        void maximally_decimated_fb(int16_t ovRat)
         {
             vector<complex<double>> f(sig.si.size(),0);
             vector<complex<double>> f2(sig.si.size(),0);
@@ -193,7 +257,7 @@ class AnalysisBank {
                     complex<double> fiq(0);
                     for( int m = 0; m < WIN_OVERLAP_RATIO; ++m ) // 8
                     {
-                        if( k - m > 0 )
+                        if( k - m >= 0 )
                         {                            
                             int indH = 128*m +127 -n;
                             int indS =  (k - m)*128 + n ;
@@ -204,19 +268,27 @@ class AnalysisBank {
 
                         }
                     }
-                    f[k*128 + n] = fpga_round(fiq, maxSummLog);
-                }
-            }            
-            for( int k = 0; k < longSize; ++k ) // filter 9
-            {
-                fft( (fftw_complex*) &f[128*k],(fftw_complex*) &f2[128*k],128, false);
-                for( int n = 0; n < 128; ++n )
-                {
-                    f2[128*k + n] = fpga_round(f2[128*k + n], coeff_radix-maxSummLog);
-                    filtered[]
+                    f[k*NFFT + n] = fpga_round(fiq, maxSummLog);
+
                 }
             }
-            int t = 1;
+            //circshift(&f[0],sig.si.size(),131);
+            for( int k = 0; k < longSize; ++k ) // filter 9
+            {
+                if (ovRat>0)
+                rotate(&f[NFFT*k],&f[NFFT*(k+1)-NFFT/FB_OVERLAP_RATIO*ovRat],&f[NFFT*(k+1)]);
+            }
+            for( int k = 0; k < longSize; ++k ) // filter 9
+            {
+
+                fft( (fftw_complex*) &f[NFFT*k],(fftw_complex*) &f2[NFFT*k],NFFT, false);
+                for( int n = 0; n < NFFT; ++n )
+                {
+                    //f2[128*k + n] = fpga_round(f2[128*k + n], coeff_radix-maxSummLog);
+                    filtered[NFFT*(FB_OVERLAP_RATIO*k+ovRat) + n] = fpga_round(f2[NFFT*k + n], coeff_radix-maxSummLog);
+                }
+            }
+            int flag = 1;
 
             //Y_sum(:,k+(n-1)*overlapped_ratio) = Y_phase_n(:,n);
         }
@@ -256,6 +328,19 @@ class AnalysisBank {
         complex<double> fpga_round( complex<double> din, int32_t shval )
         {
            return complex<double>(floor(din.real()/ pow(2,shval) + 0.5), floor(din.imag()/ pow(2,shval) + 0.5)); // floor ??
+        }
+
+        void circshift( complex<double>* x,unsigned sizex, unsigned pos )
+        {
+            complex<double> temp;
+            unsigned iter = ( sizex & 0x1 ) ? sizex/2 + 1 : sizex/2;
+            //unsigned pos = iter;
+            for( unsigned i = 0; i < iter; ++i )
+            {
+                temp = x[(pos + i)%sizex];
+                x[(pos + i)%sizex] = x[i];
+                x[i] = temp;
+            }
         }
 
 };
