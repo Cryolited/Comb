@@ -13,4 +13,9 @@ QMAKE_CXXFLAGS_RELEASE += -O3
 LIBS += -lfftw3
 
 SOURCES += \
+        analysisbank.cpp \
+        generator.cpp \
         main.cpp
+
+HEADERS += \
+    analysisbank.h

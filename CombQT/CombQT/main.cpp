@@ -1,3 +1,12 @@
+#include <analysisbank.cpp>
+#include <generator.cpp>
+/*
+#ifdef _DEBUG
+#include <crtdbg.h>
+#define _CRTDBG_MAP_ALLOC
+#endif
+*/
+/*
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -5,12 +14,6 @@
 #include <algorithm>
 #include <fftw3.h>
 
-/*
-#ifdef _DEBUG
-#include <crtdbg.h>
-#define _CRTDBG_MAP_ALLOC
-#endif
-*/
 #define WIN_H_RADIX        18
 #define FB_OVERLAP_RATIO  2 // перекрытие
 #define NFFT  128 // колво фильтров
@@ -96,21 +99,49 @@ class AnalysisBank {
                     sig.si[n] = 0;
                 }
             }
-            sig.si.resize(1152);
-            sig.sq.resize(1152);
-             FILE * fp = fopen("/home/anatoly/hub/Comb/I", "rb"); // Чтение из файла
-             FILE * fp2 = fopen("/home/anatoly/hub/Comb/Q", "rb");
-             fread(&sig.si[0], sizeof(int16_t), 1152, fp) ;
-             fread(&sig.sq[0], sizeof(int16_t), 1152, fp2) ;
+
+        }
+
+        void openSignal(uint32_t size) //1152
+        {
+            sig.si.resize(size);
+            sig.sq.resize(size);
+
+            FILE * fp = fopen("/home/anatoly/hub/Comb/I", "rb"); // Чтение из файла
+            FILE * fp2 = fopen("/home/anatoly/hub/Comb/Q", "rb");
+            fread(&sig.si[0], sizeof(int16_t), size, fp) ;
+            fread(&sig.sq[0], sizeof(int16_t), size, fp2) ;
+            fclose(fp);
+            fclose(fp2);
+        }
+
+        void readSignal(vector<int>& inVecQ, vector<int>& inVecI)
+        {
+            sig.si.resize(inVecI.size());
+            sig.sq.resize(inVecQ.size());
+
+            copy ( inVecQ.begin(), inVecQ.end(), sig.sq.begin() );
+            copy ( inVecI.begin(), inVecI.end(), sig.si.begin() );
+        }
+
+        void readSignal(int16_t inVecQ[], int16_t inVecI[], uint32_t size)
+        {
+            sig.si.resize(size);
+            sig.sq.resize(size);
+
+            copy ( inVecQ, inVecQ+size, sig.sq.begin() );
+            copy ( inVecI, inVecI+size, sig.si.begin() );
+        }
+
+
+        void saveSignal()
+        {
+             FILE * fp = fopen("/home/anatoly/hub/Comb/I", "wb"); // Запись в файл
+             FILE * fp2 = fopen("/home/anatoly/hub/Comb/Q", "wb");
+             fwrite(&sig.si[0], sizeof(int16_t), sig.si.size(), fp) ;
+             fwrite(&sig.sq[0], sizeof(int16_t), sig.sq.size(), fp2) ;
              fclose(fp);
              fclose(fp2);
-
-           /* FILE * fp = fopen("/home/anatoly/hub/Comb/I", "wb"); // Запись в файл
-            FILE * fp2 = fopen("/home/anatoly/hub/Comb/Q", "wb");
-            fwrite(&sig.si[0], sizeof(int16_t), sig.si.size(), fp) ;
-            fwrite(&sig.sq[0], sizeof(int16_t), sig.sq.size(), fp2) ;
-            fclose(fp);
-            fclose(fp2);*/
         }
 
         void createNpr() //фильтрация сигнала
@@ -119,6 +150,18 @@ class AnalysisBank {
             get_signal(); // сама фильтрация
         }
 
+
+        void saveAnalyzeFilt()
+        {
+            FILE * fp = fopen("/home/anatoly/hub/Comb/Anal", "wb");
+            fwrite(&filtered[0], sizeof(complex<double>), filtered.size(), fp) ;
+            fclose(fp);
+        }
+
+        void getAnalyzeFB()
+        {
+
+        }
 
 
         vector<int32_t> h_fb_win_fxp;
@@ -151,7 +194,7 @@ class AnalysisBank {
             h_fb_win_fxp.resize(L*M);
             double F,x;
              for (int n = 0; n < L*M ; ++n) {
-                 F = (double)n / L/M;
+                 F = double(n) / L/M;
                  x = K*(2*M*F-0.5); // rrerf
                  if (n < L*M/2)
                  A[n]= sqrt(0.5*erfc(x)) / 1023.9911405565; // 1024 вес
@@ -177,11 +220,6 @@ class AnalysisBank {
             maxSummLog = log2(maxSumm) + 0.5; // ceil
             int16_t round_fft = coeff_radix-maxSummLog ;
             non_maximally_decimated_fb(); // создание ан. гребенки фильтров
-
-            /*FILE * fp = fopen("/home/anatoly/hub/Comb/Anal", "wb");
-            fwrite(&filtered[0], sizeof(complex<double>), filtered.size(), fp) ;
-            fclose(fp);*/
-
             //npr_synthesis(); //Синтезирующая гребенка
         }
 
@@ -375,7 +413,7 @@ class AnalysisBank {
         }
 
 };
-
+*/
 
 int main()
 {
@@ -383,13 +421,18 @@ int main()
     float LFM_dev_hz = 50*1e6;
      LFM_dev_hz = 0;
     AnalysisBank comb;
-    comb.genSignal(LFM_dev_hz);    
+    Generator gen;
+    gen.genSignal(LFM_dev_hz);
+    comb.readSignal(gen.sig.sq, gen.sig.si);
+    comb.openSignal(1152);
+vector<int> inVecQ;
+        comb.readSignal(inVecQ, inVecQ);
     clock_t t = clock();
-    for (int n=0;n < 1000;++n)
+   // for (int n=0;n < 1000;++n)
         comb.createNpr();
     t=clock()-t;
     double tSec;
-    tSec=(double(t))/ CLOCKS_PER_SEC;//t время в секундах )
+    tSec=(double(t)) / CLOCKS_PER_SEC;//t время в секундах )
     cout << "Time:  "<< tSec << endl;
     return 0;
 }
