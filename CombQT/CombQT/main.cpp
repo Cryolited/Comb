@@ -4,7 +4,7 @@
 #include <complex>
 #include <algorithm>
 #include <fftw3.h>
-#include "time.h"
+
 /*
 #ifdef _DEBUG
 #include <crtdbg.h>
@@ -96,6 +96,15 @@ class AnalysisBank {
                     sig.si[n] = 0;
                 }
             }
+            sig.si.resize(1152);
+            sig.sq.resize(1152);
+             FILE * fp = fopen("/home/anatoly/hub/Comb/I", "rb"); // Чтение из файла
+             FILE * fp2 = fopen("/home/anatoly/hub/Comb/Q", "rb");
+             fread(&sig.si[0], sizeof(int16_t), 1152, fp) ;
+             fread(&sig.sq[0], sizeof(int16_t), 1152, fp2) ;
+             fclose(fp);
+             fclose(fp2);
+
            /* FILE * fp = fopen("/home/anatoly/hub/Comb/I", "wb"); // Запись в файл
             FILE * fp2 = fopen("/home/anatoly/hub/Comb/Q", "wb");
             fwrite(&sig.si[0], sizeof(int16_t), sig.si.size(), fp) ;
@@ -374,13 +383,13 @@ int main()
     float LFM_dev_hz = 50*1e6;
      LFM_dev_hz = 0;
     AnalysisBank comb;
-    comb.genSignal(LFM_dev_hz);
-    //clock_t t = clock();
-
-    comb.createNpr();
-
-    //t=clock()-t;
-    //t=float(t);//t время в секундах )
-    //cout << "Time:  "<< t << endl;
+    comb.genSignal(LFM_dev_hz);    
+    clock_t t = clock();
+    for (int n=0;n < 1000;++n)
+        comb.createNpr();
+    t=clock()-t;
+    double tSec;
+    tSec=(double(t))/ CLOCKS_PER_SEC;//t время в секундах )
+    cout << "Time:  "<< tSec << endl;
     return 0;
 }

@@ -5,6 +5,7 @@ Fs = 512e6;
 NFFT = 128;
 WIN_OVERLAP_RATIO = 8;
 
+%addpath('src');
 
 %% signal params
 t_us = 0.2 * 1e-6;
@@ -77,7 +78,7 @@ fb_analysis_data = non_maximally_decimated_fb(signal, ...
 NFFT, FB_OVERLAP_RATIO, ...
 h_fb_win_fxp, round_fir, round_fft);
 
-
+%rmpath('src');
 
 
 
