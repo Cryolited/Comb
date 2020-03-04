@@ -1,5 +1,6 @@
-#include <analysisbank.cpp>
-#include <generator.cpp>
+#include "analysisbank.cpp"
+#include "generator.cpp"
+#include "time.h"
 /*
 #ifdef _DEBUG
 #include <crtdbg.h>
@@ -423,12 +424,12 @@ int main()
     AnalysisBank comb;
     Generator gen;
     gen.genSignal(LFM_dev_hz);
-    comb.readSignal(gen.sig.sq, gen.sig.si);
+    //comb.readSignal(gen.sig.sq, gen.sig.si);
     comb.openSignal(1152);
-vector<int> inVecQ;
-        comb.readSignal(inVecQ, inVecQ);
+//vector<int> inVecQ;
+  //      comb.readSignal(inVecQ, inVecQ);
     clock_t t = clock();
-   // for (int n=0;n < 1000;++n)
+    for (int n=0;n < 1000;++n)
         comb.createNpr();
     t=clock()-t;
     double tSec;

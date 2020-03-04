@@ -187,7 +187,7 @@ void AnalysisBank::non_maximally_decimated_fb() // Анализирующая г
             //pulse_sig_phase_n[k] = sig.si[k];
             pulse_sig_phase_n[ind++] = complex<double>(sig.si[k],sig.sq[k]);
         }
-        //maximally_decimated_fb(n);
+        maximally_decimated_fb(n);
     }
 
 }

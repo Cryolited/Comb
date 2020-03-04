@@ -5,7 +5,10 @@ CONFIG -= qt
 
 #LIBS += -lfftw3
 SOURCES += \
-        ../CombQT/CombQT/main.cpp
+        ../CombQT/CombQT/main.cpp\
+        ../CombQT/CombQT/analysisbank.cpp\
+        ../CombQT/CombQT/generator.cpp\
+        ../CombQT/CombQT/analysisbank.h
        # main.cpp
 
 
