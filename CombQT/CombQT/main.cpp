@@ -424,13 +424,14 @@ int main()
     AnalysisBank comb;
     Generator gen;
     gen.genSignal(LFM_dev_hz);
-    //comb.readSignal(gen.sig.sq, gen.sig.si);
-    comb.openSignal(1152);
+    comb.readSignal(gen.sig.sq, gen.sig.si);
+    //comb.openSignal(1152);
 //vector<int> inVecQ;
   //      comb.readSignal(inVecQ, inVecQ);
     clock_t t = clock();
-    for (int n=0;n < 1000;++n)
+   for (int n=0;n < 1000;++n)
         comb.createNpr();
+    vector<vector<complex<double>>> F = comb.getAnalyzeFB();
     t=clock()-t;
     double tSec;
     tSec=(double(t)) / CLOCKS_PER_SEC;//t время в секундах )

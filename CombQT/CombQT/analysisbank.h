@@ -35,17 +35,18 @@ public:
     //void setFs(uint32_t Fs);
     //float getFs();
     void openSignal(uint32_t size);
-    void readSignal(vector<int>& inVecQ, vector<int>& inVecI);
+    void readSignal(vector<int16_t>& inVecQ, vector<int16_t>& inVecI);
     void readSignal(int16_t inVecQ[], int16_t inVecI[], uint32_t size);
     void saveSignal();
     void createNpr();
     void saveAnalyzeFilt();
-    void getAnalyzeFB();
+    vector<vector<complex<double>>>& getAnalyzeFB();
     void output();
 
 
     signal sig;
     vector<int32_t> h_fb_win_fxp;
+    vector<vector<complex<double>> > filt;
 private:
     uint32_t Fs = 512e6;
     double t_us = 0.2 * 1e-6;

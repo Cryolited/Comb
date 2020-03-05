@@ -18,7 +18,7 @@ void AnalysisBank::openSignal(uint32_t size) //1152
     fclose(fp2);
 }
 
-void AnalysisBank::readSignal(vector<int>& inVecQ, vector<int>& inVecI)
+void AnalysisBank::readSignal(vector<int16_t>& inVecQ, vector<int16_t>& inVecI)
 {
     sig.si.resize(inVecI.size());
     sig.sq.resize(inVecQ.size());
@@ -61,9 +61,9 @@ void AnalysisBank::saveAnalyzeFilt()
     fclose(fp);
 }
 
-void AnalysisBank::getAnalyzeFB()
+vector<vector<complex<double>>>& AnalysisBank::getAnalyzeFB()
 {
-
+    return filt;
 }
 
 void AnalysisBank::npr_coeff(int16_t N,int16_t L) // генерирование коэф. фильтра
@@ -104,6 +104,7 @@ void AnalysisBank::get_signal()
     int16_t round_fft = coeff_radix-maxSummLog ;
     non_maximally_decimated_fb(); // создание ан. гребенки фильтров
     //npr_synthesis(); //Синтезирующая гребенка
+    //saveAnalyzeFilt();
 }
 
 void AnalysisBank::npr_synthesis()  // Синтезирующая гребенка
@@ -173,21 +174,22 @@ void AnalysisBank::output() // вывод в файл
 void AnalysisBank::non_maximally_decimated_fb() // Анализирующая гребенка
 {
     //Y_sum = zeros(NFFT,overlapped_ratio*ceil(length(pulse_sig_round)/NFFT));
-    int16_t size = FB_OVERLAP_RATIO * ceil(sig.si.size() / NFFT);
-    vector<vector<double> > a(NFFT, vector<double>(size, 0));
-    filtered.resize(sig.si.size() * FB_OVERLAP_RATIO );
+    uint16_t size = FB_OVERLAP_RATIO * ceil(sig.si.size() / NFFT);
+    //vector<vector<double> > a(NFFT, vector<double>(size, 0));
+    filt.assign(NFFT, vector<complex<double>>(size));
+    //filtered.resize(sig.si.size() * FB_OVERLAP_RATIO );
     //int *x= new int ();
     for(int n = 0; n < FB_OVERLAP_RATIO ; ++n)
     {
-        pulse_sig_phase_n.clear();
-        pulse_sig_phase_n.resize(sig.si.size());
-        int32_t ind = 0;
-        for (int k = NFFT/FB_OVERLAP_RATIO*n; k < sig.si.size() ; ++k)
+        //pulse_sig_phase_n.clear();
+        //pulse_sig_phase_n.resize(sig.si.size());
+        //int32_t ind = 0;
+        /*for (int k = NFFT/FB_OVERLAP_RATIO*n; k < sig.si.size() ; ++k)
         {
             //pulse_sig_phase_n[k] = sig.si[k];
             pulse_sig_phase_n[ind++] = complex<double>(sig.si[k],sig.sq[k]);
-        }
-        //maximally_decimated_fb(n);
+        }*/
+        maximally_decimated_fb(n);
     }
 
 }
@@ -197,10 +199,11 @@ void AnalysisBank::maximally_decimated_fb(int16_t ovRat)
     vector<complex<double>> f(sig.si.size(),0);
     vector<complex<double>> f2(sig.si.size(),0);
     int longSize = 0;
+    vector<double> F(sig.si.size(),0);
+    int32_t h_fir = 0;
+    uint16_t indH,indS;
     for(int n = 0; n < NFFT ; ++n) // Фильтрация
     {
-        vector<double> F(sig.si.size(),0);
-
         longSize = sig.si.size()/NFFT ;
         for( int k = 0; k < longSize; ++k ) // filter 9
         {
@@ -209,11 +212,12 @@ void AnalysisBank::maximally_decimated_fb(int16_t ovRat)
             {
                 if( k - m >= 0 )
                 {
-                    int indH = 128*m +127 -n;
-
-                    int indS =  (k - m)*128 + n ;
-                    int32_t h_fir = h_fb_win_fxp[indH]; //m*128 + n
-                    complex<double> sigPh = pulse_sig_phase_n[indS];
+                    indH = 128*m +127 -n;
+                    indS =  (k - m)*128 + n + NFFT/FB_OVERLAP_RATIO*ovRat;
+                    //indS =  (k - m)*128 + n ;
+                    h_fir = h_fb_win_fxp[indH]; //m*128 + n
+                    //complex<double> sigPh = pulse_sig_phase_n[indS];
+                    complex<double> sigPh = complex<double>(sig.si[indS],sig.sq[indS]);
                     sigPh *= h_fir;
                     fiq +=  sigPh ;
 
@@ -226,18 +230,20 @@ void AnalysisBank::maximally_decimated_fb(int16_t ovRat)
     //circshift(&f[0],sig.si.size(),131);
     //filtered.clear();
     //filtered.resize(sig.si.size() * FB_OVERLAP_RATIO );
+    uint16_t ind1, ind2;
     for( int k = 0; k < longSize; ++k ) // Фильтрация(свертка) filter 9
     {
         if (ovRat>0)
         rotate(&f[NFFT*k],&f[NFFT*(k+1)-NFFT/FB_OVERLAP_RATIO*ovRat],&f[NFFT*(k+1)]);
 
-        fft( (fftw_complex*) &f[NFFT*k],(fftw_complex*) &f2[NFFT*k],NFFT, false);
+        fft( (fftw_complex*) &f[NFFT*k], (fftw_complex*) &f2[NFFT*k], NFFT, false);
         for( int n = 0; n < NFFT; ++n )
         {
             //f2[128*k + n] = fpga_round(f2[128*k + n], coeff_radix-maxSummLog);
-            int ind1 = NFFT*(FB_OVERLAP_RATIO*k+ovRat) + n;
-            int ind2 = NFFT*k + n;
-            filtered[ind1] = fpga_round(f2[ind2], coeff_radix-maxSummLog);
+            //ind1 = NFFT*(FB_OVERLAP_RATIO*k+ovRat) + n;
+            ind2 = NFFT*k + n;
+            //filtered[ind1] = fpga_round(f2[ind2], coeff_radix-maxSummLog);
+            filt[n][FB_OVERLAP_RATIO*k+ovRat] = fpga_round(f2[ind2], coeff_radix-maxSummLog);
 
         }
     }
