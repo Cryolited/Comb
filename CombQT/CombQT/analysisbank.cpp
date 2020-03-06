@@ -54,10 +54,12 @@ void AnalysisBank::createNpr() //фильтрация сигнала
 }
 
 
-void AnalysisBank::saveAnalyzeFilt()
+void AnalysisBank::saveAnalyzeFB()
 {
     FILE * fp = fopen("/home/anatoly/hub/Comb/Anal", "wb");
-    fwrite(&filtered[0], sizeof(complex<double>), filtered.size(), fp) ;
+    for (int n = 0; n < filt.size() ; ++n) {
+     fwrite(&filt[n][0], sizeof(complex<double>), filt[0].size(), fp) ;
+    }
     fclose(fp);
 }
 
@@ -104,7 +106,7 @@ void AnalysisBank::get_signal()
     int16_t round_fft = coeff_radix-maxSummLog ;
     non_maximally_decimated_fb(); // создание ан. гребенки фильтров
     //npr_synthesis(); //Синтезирующая гребенка
-    //saveAnalyzeFilt();
+    //saveAnalyzeFB();
 }
 
 void AnalysisBank::npr_synthesis()  // Синтезирующая гребенка
@@ -159,12 +161,12 @@ void AnalysisBank::npr_synthesis()  // Синтезирующая гребенк
             sigOut[n] = filtered[n] + filtered[sizeFiltered/2 + ind++];
     }
     int flag = 1;
-    output();
+    saveCreateFB();
 
 
 }
 
-void AnalysisBank::output() // вывод в файл
+void AnalysisBank::saveCreateFB() // вывод в файл
 {
     FILE * fp = fopen("/home/anatoly/hub/Comb/Signal", "wb");
     fwrite(&sigOut[0], sizeof(complex<double>), sigOut.size(), fp) ;

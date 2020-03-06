@@ -41,8 +41,8 @@ class Generator {
             sig.t[n] = (float)n/Fs;
             if ( LFM == 0)
             {
-                sig.q[n] = round(DATA_AMPL*sin(2.0*M_PI*1e6*sig.t[n]));// +rand()*10000 ;
-                sig.i[n] = round(DATA_AMPL*cos(2.0*M_PI*1e6*sig.t[n]));// +rand()*10000;
+                sig.q[n] = round(DATA_AMPL*sin(2.0*M_PI*1e6*sig.t[n])) +rand()*10000 ;
+                sig.i[n] = round(DATA_AMPL*cos(2.0*M_PI*1e6*sig.t[n])) +rand()*10000;
             }else {
                 sig.q[n] = round(DATA_AMPL*sin(2.0*M_PI*(F0*sig.t[n]+b/2.0*sig.t[n]*sig.t[n]))) ;
                 sig.i[n] = round(DATA_AMPL*cos(2.0*M_PI*(F0*sig.t[n]+b/2.0*sig.t[n]*sig.t[n]))) ;

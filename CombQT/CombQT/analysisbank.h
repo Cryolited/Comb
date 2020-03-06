@@ -39,9 +39,9 @@ public:
     void readSignal(int16_t inVecQ[], int16_t inVecI[], uint32_t size);
     void saveSignal();
     void createNpr();
-    void saveAnalyzeFilt();
+    void saveAnalyzeFB();
     vector<vector<complex<double>>>& getAnalyzeFB();
-    void output();
+    void saveCreateFB();
 
 
     signal sig;

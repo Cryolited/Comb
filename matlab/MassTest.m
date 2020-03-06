@@ -1,3 +1,4 @@
+addpath('src');
 profile on;
 
 for q= 1:1000

@@ -5,7 +5,8 @@ end
 
 Anal = fread(fid,  'double');    % чтение 
 Anal2 = Anal(1:2:end) + 1j*Anal(2:2:end);
-Anal3 = buffer(Anal2, 128);
+Anal3 = buffer(Anal2, 18).';
+%Anal3 = buffer(Anal2, 128);
 
 fclose(fid);
 
@@ -36,3 +37,11 @@ subplot(2,1,2)
 plot(real(fb_synth_data))
 
 fclose(fid);   
+%%
+
+tic
+conv([1:1000],[1:1000]);
+toc
+tic
+filter([1:1000],1,[1:1000]);
+toc
