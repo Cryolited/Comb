@@ -2,7 +2,6 @@
 #include "generator.cpp"
 #include "time.h"
 
-
 int main()
 {
 
@@ -10,14 +9,19 @@ int main()
      LFM_dev_hz = 0;
     AnalysisBank comb;
     Generator gen;
+    params pFun;
+    pFun.NFFT = 128;
+    comb.setParams(pFun);
     gen.genSignal(LFM_dev_hz); // сгенерировать сигнал
     comb.readSignal(gen.sig.sq, gen.sig.si); // передать в гребенку
     comb.saveSignal(); // Сохранить сигнал в файл
     //comb.openSignal(1152);
 
     clock_t t = clock();
-   for (int n=0;n < 1000;++n)
-        comb.createNpr();    
+
+    comb.createNpr();
+    //for (int n=0;n < 1000;++n)
+        comb.filterAnalyze();
     t=clock()-t;
     double tSec;
     tSec=(double(t)) / CLOCKS_PER_SEC;//t время в секундах )

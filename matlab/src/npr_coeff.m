@@ -129,7 +129,8 @@ if nargout==0
     grid on;
     coeff=[];
 else
-    B=B/sum(B);
+    %B=B/sum(B);
+    B=B/1;
     coeff = reshape(B,M,L);
 end
 

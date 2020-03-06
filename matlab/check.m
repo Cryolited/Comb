@@ -16,7 +16,7 @@ mesh(abs(Anal3))
 subplot(2,1,2)
 mesh(abs(fb_analysis_data))
 
-sum(sum(Anal3 - fb_analysis_data))
+isequal(Anal3 , fb_analysis_data)
 
 %%
 fid = fopen('/home/anatoly/hub/Comb/Signal', 'rb');
@@ -38,10 +38,12 @@ plot(real(fb_synth_data))
 
 fclose(fid);   
 %%
+sz = 2^15;
+tic
+filter([1:sz],1,[1:sz]);
+toc
 
 tic
-conv([1:1000],[1:1000]);
+conv([1:sz],[1:sz]);
 toc
-tic
-filter([1:1000],1,[1:1000]);
-toc
+
