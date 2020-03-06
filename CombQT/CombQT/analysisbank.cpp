@@ -5,7 +5,7 @@ AnalysisBank::AnalysisBank()
 
 }
 
-void AnalysisBank::openSignal(uint32_t size) //1152
+void AnalysisBank::openSignal(uint32_t size) //1152 открыть записанный сигнал
 {
     sig.si.resize(size);
     sig.sq.resize(size);
@@ -18,7 +18,7 @@ void AnalysisBank::openSignal(uint32_t size) //1152
     fclose(fp2);
 }
 
-void AnalysisBank::readSignal(vector<int16_t>& inVecQ, vector<int16_t>& inVecI)
+void AnalysisBank::readSignal(vector<int16_t>& inVecQ, vector<int16_t>& inVecI) // считать вектор входного сигнала
 {
     sig.si.resize(inVecI.size());
     sig.sq.resize(inVecQ.size());
@@ -27,7 +27,7 @@ void AnalysisBank::readSignal(vector<int16_t>& inVecQ, vector<int16_t>& inVecI)
     copy ( inVecI.begin(), inVecI.end(), sig.si.begin() );
 }
 
-void AnalysisBank::readSignal(int16_t inVecQ[], int16_t inVecI[], uint32_t size)
+void AnalysisBank::readSignal(int16_t inVecQ[], int16_t inVecI[], uint32_t size) // считать массив входного сигнала
 {
     sig.si.resize(size);
     sig.sq.resize(size);
@@ -37,7 +37,7 @@ void AnalysisBank::readSignal(int16_t inVecQ[], int16_t inVecI[], uint32_t size)
 }
 
 
-void AnalysisBank::saveSignal()
+void AnalysisBank::saveSignal() // записать в файл сгенерированный сигнал
 {
      FILE * fp = fopen("/home/anatoly/hub/Comb/I", "wb"); // Запись в файл
      FILE * fp2 = fopen("/home/anatoly/hub/Comb/Q", "wb");
@@ -54,7 +54,7 @@ void AnalysisBank::createNpr() //фильтрация сигнала
 }
 
 
-void AnalysisBank::saveAnalyzeFB()
+void AnalysisBank::saveAnalyzeFB() // записать в файл спек-му Анализирующей Гребенки
 {
     FILE * fp = fopen("/home/anatoly/hub/Comb/Anal", "wb");
     for (int n = 0; n < filt.size() ; ++n) {
@@ -63,7 +63,7 @@ void AnalysisBank::saveAnalyzeFB()
     fclose(fp);
 }
 
-vector<vector<complex<double>>>& AnalysisBank::getAnalyzeFB()
+vector<vector<complex<double>>>& AnalysisBank::getAnalyzeFB() // получить спек-му Анализирующей Гребенки
 {
     return filt;
 }
@@ -84,7 +84,7 @@ void AnalysisBank::npr_coeff(int16_t N,int16_t L) // генерирование 
          if (n < L*M/2)
          A[n]= sqrt(0.5*erfc(x)) / 1023.9911405565; // 1024 вес
          else
-         A[n]= A[L*M-n].real(); // Для симметрии мб индексация
+         A[n]= A[L*M-n].real(); // Для симметрии (мб индексация?)
      }
     fft((fftw_complex*) &A[0],(fftw_complex*) &B[0],1024, true);//(fftw_complex*)
     double max_coeff_val = B[0].real();
@@ -166,7 +166,7 @@ void AnalysisBank::npr_synthesis()  // Синтезирующая гребенк
 
 }
 
-void AnalysisBank::saveCreateFB() // вывод в файл
+void AnalysisBank::saveCreateFB() // вывод в файл сигнала после Синетезирующей Гребенки
 {
     FILE * fp = fopen("/home/anatoly/hub/Comb/Signal", "wb");
     fwrite(&sigOut[0], sizeof(complex<double>), sigOut.size(), fp) ;
@@ -181,7 +181,7 @@ void AnalysisBank::non_maximally_decimated_fb() // Анализирующая г
     filt.assign(NFFT, vector<complex<double>>(size));
     //filtered.resize(sig.si.size() * FB_OVERLAP_RATIO );
     //int *x= new int ();
-    for(int n = 0; n < FB_OVERLAP_RATIO ; ++n)
+    for(int16_t n = 0; n < FB_OVERLAP_RATIO ; ++n)
     {
         //pulse_sig_phase_n.clear();
         //pulse_sig_phase_n.resize(sig.si.size());
@@ -204,6 +204,7 @@ void AnalysisBank::maximally_decimated_fb(int16_t ovRat)
     vector<double> F(sig.si.size(),0);
     int32_t h_fir = 0;
     uint16_t indH,indS;
+    complex<double> sigPh;
     for(int n = 0; n < NFFT ; ++n) // Фильтрация
     {
         longSize = sig.si.size()/NFFT ;
@@ -215,11 +216,10 @@ void AnalysisBank::maximally_decimated_fb(int16_t ovRat)
                 if( k - m >= 0 )
                 {
                     indH = 128*m +127 -n;
-                    indS =  (k - m)*128 + n + NFFT/FB_OVERLAP_RATIO*ovRat;
+                    indS = ( (k - m)*128 + n + NFFT/FB_OVERLAP_RATIO*ovRat )%sig.si.size();
                     //indS =  (k - m)*128 + n ;
                     h_fir = h_fb_win_fxp[indH]; //m*128 + n
-                    //complex<double> sigPh = pulse_sig_phase_n[indS];
-                    complex<double> sigPh = complex<double>(sig.si[indS],sig.sq[indS]);
+                    sigPh = complex<double>(sig.si[indS],sig.sq[indS]);
                     sigPh *= h_fir;
                     fiq +=  sigPh ;
 
@@ -249,7 +249,7 @@ void AnalysisBank::maximally_decimated_fb(int16_t ovRat)
 
         }
     }
-    int flag = 1;
+    int flag = 1; // for debug only
 
 }
 

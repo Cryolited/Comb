@@ -5,7 +5,7 @@ end
 
 Anal = fread(fid,  'double');    % чтение 
 Anal2 = Anal(1:2:end) + 1j*Anal(2:2:end);
-Anal3 = buffer(Anal2, 18).';
+Anal3 = buffer(Anal2, length(Anal2)/128).';
 %Anal3 = buffer(Anal2, 128);
 
 fclose(fid);
