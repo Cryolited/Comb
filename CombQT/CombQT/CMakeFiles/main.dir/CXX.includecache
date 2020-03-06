@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/anatoly/hub/Comb/CombQT/CombQT/main.cpp
+vector
+-
+cmath
+-
+complex
+-
+algorithm
+-
+fftw3.h
+-
+crtdbg.h
+-
+
