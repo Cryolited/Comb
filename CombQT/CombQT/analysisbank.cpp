@@ -209,6 +209,7 @@ void AnalysisBank::maximally_decimated_fb(int16_t ovRat)
     int32_t h_fir = 0;
     uint16_t indH,indS;
     complex<double> sigPh;
+    int cnt = 0;
     for(int n = 0; n < p.NFFT ; ++n) // Фильтрация(свертка)
     {
         longSize = sig.si.size()/p.NFFT ;
@@ -226,6 +227,7 @@ void AnalysisBank::maximally_decimated_fb(int16_t ovRat)
                     sigPh = complex<double>(sig.si[indS],sig.sq[indS]);
                     sigPh *= h_fir;
                     fiq +=  sigPh ;
+                    cnt++;
 
                 }
             }

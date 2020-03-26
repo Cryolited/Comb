@@ -30,14 +30,14 @@ f0                  = -LFM_dev_hz/2;
 b                   = (LFM_dev_hz/time_sec);   
 sig                 = exp(1i*2*pi*(f0*t+b/2*t.^2));
 sig_round           = round(DATA_AMPL*sig);
-%signal              = [zeros(1,first_period_part*Fs) sig_round zeros(1,second_period_part*Fs)];
+signal              = [zeros(1,first_period_part*Fs) sig_round zeros(1,second_period_part*Fs)];
 % signal              = [zeros(1,period_us*Fs) sig_round];
 % signal              = [ sig_round zeros(1,period_us*Fs)];
 %plot(-Fs/2:Fs/length(signal):(Fs/2 - Fs/length(signal)),abs(fftshift(fft(signal))));
 %spectrogram(signal,256,250,[],Fs,'yaxis')
 
 
-fid = fopen('/home/anatoly/hub/Comb/I', 'rb');
+fid = fopen('../I', 'rb'); %/home/anatoly/hub/Comb/I
 if fid == -1                     % проверка корректности открытия
     error('File is not opened');
 end 
@@ -45,7 +45,7 @@ end
 signalI = fread(fid,'int16');    % чтение 
 fclose(fid); 
 
-fid2 = fopen('/home/anatoly/hub/Comb/Q', 'rb');
+fid2 = fopen('../Q', 'rb');
 signalQ = fread(fid2,  'int16');    % чтение 
 %Output2 = Output(1:2:end) + 1j*Output(2:2:end);
 %rez = Output2 - fb_synth_data.';
@@ -53,8 +53,12 @@ fclose(fid2);
 
 
 
-signal = signalI + 1j*signalQ;
+%signal = signalI + 1j*signalQ;
+f_signal = (fft(signal));
 
+signal = f_signal; % comment this after
+ZZ = buffer(signal,NFFT);
+mesh(abs(ZZ))
 %% analysis filter Bank
 
 
@@ -66,6 +70,10 @@ FW                = 4e6;
 % 1.create npr coeff
 c=npr_coeff(NFFT,2*WIN_OVERLAP_RATIO);
 coeff = c(:);
+f_coeff = abs(fftshift(fft(coeff)));
+
+coeff = f_coeff; % comment this after 
+
 max_coeff_val = max(abs(coeff));
 coeff_radix = fix(log2(2^(WIN_H_RADIX-1)/max_coeff_val));
 h_fb_win_fxp = round(coeff*2^coeff_radix);
